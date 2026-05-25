@@ -206,7 +206,7 @@ class OrderDetailsScreen extends StatelessWidget {
     final category = item['category'] ?? 'Category';
     final price = (item['price'] as num?)?.toDouble() ?? 0.0;
     final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
-    final imageUrl = item['imageUrl'] ?? 'assets/images/static_23.jpg';
+    final imageUrl = item['imageUrl'] ?? 'https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),

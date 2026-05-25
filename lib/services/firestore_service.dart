@@ -239,7 +239,7 @@ class FirestoreService {
       'name': name,
       'email': email,
       'gender': 'Male',
-      'profileImageUrl': 'assets/images/static_23.jpg',
+      'profileImageUrl': 'https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png',
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
