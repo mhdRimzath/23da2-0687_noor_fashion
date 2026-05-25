@@ -50,7 +50,12 @@ class ProfileProvider extends ChangeNotifier {
 
       // 2. Try to sync/migrate
       if (await _connectivityService.isConnected()) {
-        _profile = await _repository.migrateAndSyncProfile(uid, localProfile);
+        try {
+          _profile = await _repository.migrateAndSyncProfile(uid, localProfile).timeout(const Duration(seconds: 8));
+        } catch (e) {
+          _profile = localProfile;
+          _error = 'Offline mode or sync timed out. Changes will sync when online.';
+        }
       } else {
         _profile = localProfile;
         _error = 'Offline mode. Changes will sync when online.';

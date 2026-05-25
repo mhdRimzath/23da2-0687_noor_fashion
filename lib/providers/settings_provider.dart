@@ -9,6 +9,7 @@ class SettingsProvider with ChangeNotifier {
   StreamSubscription? _settingsSubscription;
   StreamSubscription? _authSubscription;
   SharedPreferences? _prefs;
+  final Completer<void> _ready = Completer<void>();
 
   bool _isLoading = false;
   Map<String, dynamic> _settings = {
@@ -25,13 +26,19 @@ class SettingsProvider with ChangeNotifier {
   bool get biometricAuth => _settings['biometricAuth'] ?? false;
 
   SettingsProvider() {
+    final systemDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+    _settings['darkMode'] = systemDark;
     _initPrefs();
   }
 
   Future<void> _initPrefs() async {
     _prefs = await SharedPreferences.getInstance();
+    final systemDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
     if (_prefs != null && _prefs!.containsKey('darkMode')) {
-      _settings['darkMode'] = _prefs!.getBool('darkMode') ?? false;
+      _settings['darkMode'] = _prefs!.getBool('darkMode') ?? systemDark;
+      notifyListeners();
+    } else {
+      _settings['darkMode'] = systemDark;
       notifyListeners();
     }
 
@@ -41,7 +48,7 @@ class SettingsProvider with ChangeNotifier {
       } else {
         _settingsSubscription?.cancel();
         // Reset to defaults on logout, BUT keep the user's cached dark mode preference
-        final currentDarkMode = _prefs?.getBool('darkMode') ?? _settings['darkMode'] ?? false;
+        final currentDarkMode = _prefs?.getBool('darkMode') ?? _settings['darkMode'] ?? systemDark;
         _settings = {
           'pushNotifications': true,
           'emailNotifications': true,
@@ -51,7 +58,12 @@ class SettingsProvider with ChangeNotifier {
         notifyListeners();
       }
     });
+    // Mark provider as ready for callers that need the preference synchronously
+    if (!_ready.isCompleted) _ready.complete();
   }
+
+  /// Wait until the provider has completed initial preference loading.
+  Future<void> waitUntilReady() => _ready.future;
 
   void _initSettingsStream(String userId) {
     _settingsSubscription?.cancel();
@@ -61,17 +73,32 @@ class SettingsProvider with ChangeNotifier {
     _settingsSubscription = _firestoreService.getSettingsStream(userId).listen((settingsData) {
       _isLoading = false;
       if (settingsData != null) {
-        // Merge fetched data with defaults
+        // Prefer an explicit darkMode value from Firestore, otherwise keep the
+        // locally cached preference (or system default) to avoid unexpected flips.
+        final bool darkModeValue = settingsData.containsKey('darkMode')
+            ? (settingsData['darkMode'] as bool)
+            : (_prefs?.getBool('darkMode') ?? _settings['darkMode'] ?? 
+                WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+
         _settings = {
-          'pushNotifications': settingsData['pushNotifications'] ?? true,
-          'emailNotifications': settingsData['emailNotifications'] ?? true,
-          'darkMode': settingsData['darkMode'] ?? false,
-          'biometricAuth': settingsData['biometricAuth'] ?? false,
+          'pushNotifications': settingsData['pushNotifications'] ?? _settings['pushNotifications'] ?? true,
+          'emailNotifications': settingsData['emailNotifications'] ?? _settings['emailNotifications'] ?? true,
+          'darkMode': darkModeValue,
+          'biometricAuth': settingsData['biometricAuth'] ?? _settings['biometricAuth'] ?? false,
         };
-        // Cache the latest dark mode state from Firestore
+
+        // Cache the resolved dark mode preference locally
         if (_prefs != null) {
           _prefs!.setBool('darkMode', _settings['darkMode']);
         }
+      } else {
+        // If settings don't exist in Firestore, save the current local settings to Firestore
+        _firestoreService.updateSettings(userId, {
+          'pushNotifications': _settings['pushNotifications'] ?? true,
+          'emailNotifications': _settings['emailNotifications'] ?? true,
+          'darkMode': _settings['darkMode'] ?? false,
+          'biometricAuth': _settings['biometricAuth'] ?? false,
+        });
       }
       notifyListeners();
     }, onError: (e) {

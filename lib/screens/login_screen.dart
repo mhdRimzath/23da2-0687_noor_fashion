@@ -6,6 +6,7 @@ import '../core/theme.dart';
 import '../widgets/main_navigation.dart';
 import '../services/auth_service.dart';
 import '../providers/cart_provider.dart';
+import '../providers/settings_provider.dart';
 import 'migration_loading_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,14 +21,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.watch<SettingsProvider>().darkMode;
+    final textPrimary = isDark ? NoorTheme.onSurfaceLight : NoorTheme.textColor(context);
+    final textSecondary = isDark
+        ? NoorTheme.onSurfaceLight.withValues(alpha: 0.6)
+        : NoorTheme.textMuted(context);
+    final bgColor = isDark ? NoorTheme.surfaceDark : NoorTheme.background(context);
+    final appBarBg = isDark
+        ? NoorTheme.appBarBg(context)
+        : NoorTheme.appBarBg(context).withAlpha(204);
+    final borderColor = isDark ? NoorTheme.onSurfaceLight.withValues(alpha: 0.1) : NoorTheme.border(context);
+    final hintColor = isDark
+        ? NoorTheme.onSurfaceLight.withValues(alpha: 0.3)
+        : const Color(0xFFC6C6CD);
+    final underlineColor = isDark
+        ? NoorTheme.onSurfaceLight.withValues(alpha: 0.15)
+        : const Color(0x66C6C6CD);
+    final focusBorderColor = isDark ? NoorTheme.accentGold : NoorTheme.primaryNavy;
+    final btnBg = isDark ? NoorTheme.onSurfaceLight : NoorTheme.primaryNavy;
+    final btnFg = isDark ? NoorTheme.surfaceDark : Colors.white;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF9F4), // background
+      backgroundColor: bgColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: NoorTheme.primaryNavy),
+          icon: Icon(Icons.arrow_back, color: textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -36,11 +58,11 @@ class _LoginScreenState extends State<LoginScreen> {
             fontWeight: FontWeight.w900,
             letterSpacing: -1.0,
             fontSize: 20,
-            color: NoorTheme.primaryNavy,
+            color: textPrimary,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white.withAlpha(204), // white/80
+        backgroundColor: appBarBg,
         scrolledUnderElevation: 0,
         elevation: 0,
       ),
@@ -59,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1.0,
                     fontSize: 36, // text-4xl
-                    color: NoorTheme.primaryNavy,
+                    color: textPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -67,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Please enter your credentials to access your curated collections.',
                   style: GoogleFonts.manrope(
                     fontSize: 16,
-                    color: const Color(0xFF45464D), // on-surface-variant
+                    color: textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -77,12 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('EMAIL ADDRESS'),
+                      _buildLabel(context, 'EMAIL ADDRESS'),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        style: GoogleFonts.manrope(color: NoorTheme.primaryNavy),
+                        style: GoogleFonts.manrope(color: textPrimary),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email address.';
@@ -94,16 +116,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         decoration: InputDecoration(
                           hintText: 'name@atelier.com',
-                          hintStyle: GoogleFonts.manrope(
-                            color: const Color(0xFFC6C6CD), // outline-variant
-                          ),
-                          filled: false,
+                          hintStyle: GoogleFonts.manrope(color: hintColor),
+                          filled: true,
+                          fillColor: NoorTheme.inputBg(context),
                           contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
-                          enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0x66C6C6CD)), // outline-variant/40
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: underlineColor),
                           ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: NoorTheme.primaryNavy, width: 2),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: focusBorderColor, width: 2),
                           ),
                         ),
                       ),
@@ -111,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildLabel('PASSWORD'),
+                          _buildLabel(context, 'PASSWORD'),
                           GestureDetector(
                             onTap: () {},
                             child: Text(
@@ -129,8 +150,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _passwordController,
-                        obscureText: true,
-                        style: GoogleFonts.manrope(color: NoorTheme.primaryNavy),
+                        obscureText: _obscurePassword,
+                        style: GoogleFonts.manrope(color: textPrimary),
+                        cursorColor: textPrimary,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your password.';
@@ -142,24 +164,34 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         decoration: InputDecoration(
                           hintText: '••••••••',
-                          hintStyle: GoogleFonts.manrope(
-                            color: const Color(0xFFC6C6CD),
-                          ),
-                          filled: false,
+                          hintStyle: GoogleFonts.manrope(color: hintColor),
+                          filled: true,
+                          fillColor: NoorTheme.inputBg(context),
                           contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
-                          enabledBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0x66C6C6CD)),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: underlineColor),
                           ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: NoorTheme.primaryNavy, width: 2),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: focusBorderColor, width: 2),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: hintColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
                       ),
                       const SizedBox(height: 32),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: NoorTheme.primaryNavy,
-                          foregroundColor: Colors.white,
+                          backgroundColor: btnBg,
+                          foregroundColor: btnFg,
                           minimumSize: const Size.fromHeight(56), // h-14
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4), // rounded-md
@@ -170,6 +202,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? null
                             : () async {
                                 if (_formKey.currentState!.validate()) {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final navigator = Navigator.of(context);
+                                  final redirectIndex = ModalRoute.of(context)
+                                          ?.settings
+                                          .arguments as int? ??
+                                      0;
+                                  final cartProvider = context.read<CartProvider>();
+
                                   setState(() {
                                     _isLoading = true;
                                   });
@@ -178,33 +218,47 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _emailController.text.trim(),
                                       _passwordController.text.trim(),
                                     );
-                                    if (context.mounted && userCredential.user != null) {
-                                      await context.read<CartProvider>().migrateGuestCartToFirestore(userCredential.user!.uid);
+                                    final user = userCredential.user;
+
+                                    if (user == null) {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                        messenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Login failed. Please try again.'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                      return;
                                     }
-                                    if (context.mounted) {
-                                      final redirectIndex = ModalRoute.of(
-                                              context)
-                                          ?.settings
-                                          .arguments as int? ??
-                                          0;
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => MigrationLoadingScreen(
-                                            uid: userCredential.user!.uid,
-                                            nextScreen: MainNavigation(
-                                              isLoggedIn: true,
-                                              initialIndex: redirectIndex,
-                                            ),
+
+                                    await cartProvider.migrateGuestCartToFirestore(user.uid);
+
+                                    if (mounted) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    }
+
+                                    if (!mounted) return;
+                                    navigator.pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => MigrationLoadingScreen(
+                                          uid: user.uid,
+                                          nextScreen: MainNavigation(
+                                            isLoggedIn: true,
+                                            initialIndex: redirectIndex,
                                           ),
                                         ),
-                                        (route) => false,
-                                      );
-                                    }
+                                      ),
+                                      (route) => false,
+                                    );
                                   } on FirebaseAuthException catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      messenger.showSnackBar(
                                         SnackBar(
                                           content: Text(e.message ??
                                               'An authentication error occurred.'),
@@ -214,10 +268,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      messenger.showSnackBar(
                                         SnackBar(
-
                                           content: Text(
                                               'An unexpected error occurred: $e'),
                                           backgroundColor: Colors.red,
@@ -234,11 +286,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }
                               },
                         child: _isLoading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: btnFg,
                                   strokeWidth: 2,
                                 ),
                               )
@@ -257,7 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
                 Row(
                   children: [
-                    const Expanded(child: Divider(color: Color(0xFFE5E2DD))), // surface-container-highest
+                    Expanded(child: Divider(color: borderColor)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
@@ -266,31 +318,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
-                          color: const Color(0xFF76777D), // outline
+                          color: textSecondary,
                         ),
                       ),
                     ),
-                    const Expanded(child: Divider(color: Color(0xFFE5E2DD))),
+                    Expanded(child: Divider(color: borderColor)),
                   ],
                 ),
                 const SizedBox(height: 32),
                 Row(
                   children: [
                     Expanded(
-                      child: _buildSocialButton('GOOGLE', Icons.g_mobiledata),
+                      child: _buildSocialButton(context, 'GOOGLE', Icons.g_mobiledata),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: _buildSocialButton('APPLE', Icons.apple),
+                      child: _buildSocialButton(context, 'APPLE', Icons.apple),
                     ),
                   ],
                 ),
                 const SizedBox(height: 48),
                 Container(
                   padding: const EdgeInsets.only(top: 32),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: Color(0xFFE5E2DD)),
+                      top: BorderSide(color: borderColor),
                     ),
                   ),
                   child: Center(
@@ -311,7 +363,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Don\'t have an account? ',
                             style: GoogleFonts.manrope(
                               fontSize: 14,
-                              color: const Color(0xFF45464D), // on-surface-variant
+                              color: textSecondary,
                             ),
                           ),
                           Text(
@@ -319,11 +371,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: GoogleFonts.manrope(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: NoorTheme.primaryNavy,
+                              color: textPrimary,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward, size: 16, color: NoorTheme.primaryNavy),
+                          Icon(Icons.arrow_forward, size: 16, color: textPrimary),
                         ],
                       ),
                     ),
@@ -337,24 +389,28 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(BuildContext context, String text) {
     return Text(
       text,
       style: GoogleFonts.manrope(
         fontSize: 10,
         fontWeight: FontWeight.bold,
         letterSpacing: 1.5,
-        color: const Color(0xFF45464D),
+        color: NoorTheme.textMuted(context),
       ),
     );
   }
 
-  Widget _buildSocialButton(String text, IconData icon) {
+  Widget _buildSocialButton(BuildContext context, String text, IconData icon) {
+    final textPrimary = NoorTheme.textColor(context);
+    final cardBg = NoorTheme.cardAlt(context);
+    final borderColor = NoorTheme.border(context);
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F3EE), // surface-container-low
-        border: Border.all(color: const Color(0x33C6C6CD)), // outline-variant/20
+        color: cardBg,
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Material(
@@ -365,15 +421,18 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: NoorTheme.primaryNavy, size: 20),
+              Icon(icon, color: textPrimary, size: 20),
               const SizedBox(width: 12),
-              Text(
-                text,
-                style: GoogleFonts.manrope(
-                  color: NoorTheme.primaryNavy,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
+              Flexible(
+                child: Text(
+                  text,
+                  style: GoogleFonts.manrope(
+                    color: textPrimary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

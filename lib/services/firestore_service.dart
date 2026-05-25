@@ -139,6 +139,47 @@ class FirestoreService {
     await batch.commit();
   }
 
+  /// Migrate guest cart items to the user's Firestore cart using a WriteBatch.
+  Future<void> migrateCartItems(String userId, List<Map<String, dynamic>> localItems) async {
+    if (localItems.isEmpty) return;
+
+    final cartCollection = _db.collection('users').doc(userId).collection('cart');
+
+    // Fetch existing cart items in Firestore in one go to merge quantities
+    final snapshot = await cartCollection.get();
+    final Map<String, int> existingQuantities = {};
+    for (final doc in snapshot.docs) {
+      existingQuantities[doc.id] = (doc.data()['quantity'] as num?)?.toInt() ?? 0;
+    }
+
+    final batch = _db.batch();
+
+    for (final item in localItems) {
+      final productId = item['productId'] as String;
+      final qty = item['quantity'] as int;
+      final docRef = cartCollection.doc(productId);
+
+      if (existingQuantities.containsKey(productId)) {
+        final newQty = existingQuantities[productId]! + qty;
+        batch.update(docRef, {'quantity': newQty});
+        existingQuantities[productId] = newQty; // update local cache map
+      } else {
+        batch.set(docRef, {
+          'productId': productId,
+          'name': item['name'] ?? '',
+          'price': item['price'] ?? 0.0,
+          'imageUrl': item['imageUrl'] ?? '',
+          'category': item['category'] ?? '',
+          'description': item['description'] ?? '',
+          'quantity': qty,
+        });
+        existingQuantities[productId] = qty;
+      }
+    }
+
+    await batch.commit();
+  }
+
   // ─── Wishlist ────────────────────────────────────────────────────────
   /// Real-time stream of wishlist items for a specific user.
   Stream<List<Map<String, dynamic>>> getWishlistStream(String userId) {

@@ -122,7 +122,13 @@ class CartProvider extends ChangeNotifier {
     // Add each item to Firestore
     for (final item in itemsToMigrate) {
       for (int i = 0; i < item.quantity; i++) {
-        await FirestoreService().addToCart(userId, item.product);
+        try {
+          await FirestoreService()
+              .addToCart(userId, item.product)
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('Cart migration for item timed out or failed: $e');
+        }
       }
     }
   }

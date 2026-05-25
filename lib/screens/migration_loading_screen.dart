@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/settings_provider.dart';
 import '../core/theme.dart';
 
 class MigrationLoadingScreen extends StatefulWidget {
@@ -37,31 +38,41 @@ class _MigrationLoadingScreenState extends State<MigrationLoadingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.watch<SettingsProvider>().darkMode;
+    final bgColor = isDark ? NoorTheme.surfaceDark : NoorTheme.background(context);
+    final primaryText = isDark ? NoorTheme.onSurfaceLight : NoorTheme.textColor(context);
+    final secondaryText = isDark
+        ? NoorTheme.onSurfaceLight.withValues(alpha: 0.6)
+        : NoorTheme.textMuted(context);
+    final progressColor = isDark ? NoorTheme.onSurfaceLight : NoorTheme.primaryNavy;
+    final buttonBg = isDark ? NoorTheme.onSurfaceLight : NoorTheme.primaryNavy;
+    final buttonFg = isDark ? NoorTheme.surfaceDark : Colors.white;
+
     return Scaffold(
-      backgroundColor: NoorTheme.backgroundChalk,
+      backgroundColor: bgColor,
       body: Center(
         child: Consumer<ProfileProvider>(
           builder: (context, provider, child) {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(color: NoorTheme.primaryNavy),
+                CircularProgressIndicator(color: progressColor),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'SYNCING PROFILE',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2.0,
-                    color: NoorTheme.primaryNavy,
+                    color: primaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _getStatusText(provider.profile?.migrationStatus ?? 'pending'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF45464D),
+                    color: secondaryText,
                   ),
                 ),
                 if (provider.error.isNotEmpty) ...[
@@ -74,7 +85,10 @@ class _MigrationLoadingScreenState extends State<MigrationLoadingScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => _startMigration(),
-                    style: ElevatedButton.styleFrom(backgroundColor: NoorTheme.primaryNavy),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: buttonBg,
+                      foregroundColor: buttonFg,
+                    ),
                     child: const Text('RETRY'),
                   )
                 ]

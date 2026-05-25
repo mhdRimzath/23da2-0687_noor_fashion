@@ -15,9 +15,18 @@ class AuthService {
     final credential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
+    ).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => throw Exception('Sign-in timed out. Please check your network connection.'),
     );
     if (credential.user != null) {
-      await FirestoreService().migrateCurrentUserProfile(credential.user!);
+      try {
+        await FirestoreService()
+            .migrateCurrentUserProfile(credential.user!)
+            .timeout(const Duration(seconds: 4));
+      } catch (e) {
+        // Continue login even if migration fails/times out
+      }
     }
     return credential;
   }
@@ -27,15 +36,30 @@ class AuthService {
     UserCredential credential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
+    ).timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => throw Exception('Sign-up timed out. Please check your network connection.'),
     );
     if (credential.user != null) {
-      await credential.user!.updateDisplayName(name);
-      await credential.user!.reload();
+      try {
+        await credential.user!.updateDisplayName(name).timeout(const Duration(seconds: 2));
+      } catch (_) {}
+      try {
+        await credential.user!.reload().timeout(const Duration(seconds: 2));
+      } catch (_) {}
       final updatedUser = _auth.currentUser;
-      if (updatedUser != null) {
-        await FirestoreService().migrateCurrentUserProfile(updatedUser);
-      } else {
-        await FirestoreService().migrateCurrentUserProfile(credential.user!);
+      try {
+        if (updatedUser != null) {
+          await FirestoreService()
+              .migrateCurrentUserProfile(updatedUser)
+              .timeout(const Duration(seconds: 4));
+        } else {
+          await FirestoreService()
+              .migrateCurrentUserProfile(credential.user!)
+              .timeout(const Duration(seconds: 4));
+        }
+      } catch (e) {
+        // Continue signup even if migration fails/times out
       }
     }
     return credential;

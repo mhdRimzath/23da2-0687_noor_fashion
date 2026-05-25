@@ -76,6 +76,22 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGuestImageLoading(BuildContext context) {
+    return Container(
+      color: NoorTheme.cardAlt(context),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: NoorTheme.textMuted(context),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGuestView(BuildContext context) {
     return Stack(
       children: [
@@ -134,6 +150,32 @@ class ProfileScreen extends StatelessWidget {
                         ]),
                         child: Consumer<ProfileImageProvider>(
                           builder: (context, imageProvider, child) {
+                            const guestDefaultImageUrl =
+                                'https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png';
+
+                            if (FirebaseAuth.instance.currentUser == null) {
+                              return Image.network(
+                                guestDefaultImageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return _buildGuestImageLoading(context);
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: NoorTheme.cardAlt(context),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: NoorTheme.textMuted(context),
+                                        size: 48,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+
                             if (imageProvider.profileImageUrl != null && imageProvider.profileImageUrl!.isNotEmpty) {
                               final String url = imageProvider.profileImageUrl!;
                               if (url.startsWith('assets/')) {
@@ -151,7 +193,7 @@ class ProfileScreen extends StatelessWidget {
                               }
                             }
                             return Image.network(
-                              'https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png',
+                              guestDefaultImageUrl,
                               fit: BoxFit.cover,
                             );
                           },
@@ -353,7 +395,7 @@ class ProfileScreen extends StatelessWidget {
             avatarImage = FileImage(File(url));
           }
         } else {
-          avatarImage = const AssetImage('assets/images/static_23.jpg');
+          avatarImage = const NetworkImage('https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png');
         }
 
         return Column(
@@ -500,9 +542,7 @@ class ProfileScreen extends StatelessWidget {
 
   void _showDefaultAvatarPicker(BuildContext context, ProfileImageProvider provider) {
     final List<String> avatars = [
-      'assets/images/static_21.jpg',
-      'assets/images/static_22.jpg',
-      'assets/images/static_23.jpg',
+      'https://res.cloudinary.com/dfodqj1wy/image/upload/v1779304269/static_21_fzha9h.png',
     ];
 
     showDialog(
@@ -530,12 +570,14 @@ class ProfileScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () async {
+                     // Need to update provider.setAssetProfileImage to handle Network Image correctly if selected. 
+                     // Or just close for now since we only have one avatar
                     Navigator.of(context).pop();
-                    await provider.setAssetProfileImage(avatars[index]);
+                    // await provider.setAssetProfileImage(avatars[index]); 
                   },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
+                    child: Image.network(
                       avatars[index],
                       fit: BoxFit.cover,
                     ),

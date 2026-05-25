@@ -23,7 +23,7 @@ class ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty || FirebaseAuth.instance.currentUser == null) {
+    if (imageUrl.isEmpty) {
       return _buildPlaceholder(context);
     }
 
