@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../core/theme.dart';
 
 /// A smart image widget that automatically renders network or asset images
